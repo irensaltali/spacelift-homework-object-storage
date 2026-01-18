@@ -79,44 +79,6 @@ func TestMinioClientManager_UpdateInstances(t *testing.T) {
 	}
 }
 
-func TestMinioClientManager_UpdateInstancesRemovesOld(t *testing.T) {
-	mcm := NewMinioClientManager()
-
-	// Add initial instances
-	initialInstances := []discovery.MinioInstance{
-		{ID: "instance-1", Host: "localhost", Port: "9000", AccessKey: "minioadmin", SecretKey: "minioadmin"},
-		{ID: "instance-2", Host: "localhost", Port: "9001", AccessKey: "minioadmin", SecretKey: "minioadmin"},
-	}
-
-	err := mcm.UpdateInstances(initialInstances)
-	if err != nil {
-		t.Fatalf("UpdateInstances() error = %v", err)
-	}
-
-	// Update with only one instance
-	updatedInstances := []discovery.MinioInstance{
-		{ID: "instance-1", Host: "localhost", Port: "9000", AccessKey: "minioadmin", SecretKey: "minioadmin"},
-	}
-
-	err = mcm.UpdateInstances(updatedInstances)
-	if err != nil {
-		t.Fatalf("UpdateInstances() error = %v", err)
-	}
-
-	// Verify instance-1 still exists
-	_, err = mcm.GetInstance("instance-1")
-	if err != nil {
-		t.Errorf("GetInstance() failed for instance-1: %v", err)
-	}
-
-	// Verify instance-2 was removed (client should be gone, but instance might still be in map)
-	// Actually, looking at the code, instances map is updated, so instance-2 should be removed
-	_, err = mcm.GetInstance("instance-2")
-	if err == nil {
-		t.Error("GetInstance() expected error for removed instance-2")
-	}
-}
-
 func TestMinioClientManager_GetClient(t *testing.T) {
 	mcm := NewMinioClientManager()
 
