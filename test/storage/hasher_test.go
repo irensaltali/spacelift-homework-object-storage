@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/spacelift-io/object-storage-gateway/internal/storage"
+	"github.com/irensaltali/object-storage-gateway/internal/storage"
 )
 
 func TestConsistentHasher(t *testing.T) {

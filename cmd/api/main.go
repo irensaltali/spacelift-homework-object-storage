@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/spacelift-io/object-storage-gateway/internal/api"
-	"github.com/spacelift-io/object-storage-gateway/internal/discovery"
+	"github.com/irensaltali/object-storage-gateway/internal/api"
+	"github.com/irensaltali/object-storage-gateway/internal/discovery"
+	"github.com/irensaltali/object-storage-gateway/internal/storage"
 )
 
 func main() {
@@ -32,6 +33,13 @@ func main() {
 	for _, inst := range instances {
 		log.Printf("  - instance %s at %s:%s", inst.ID, inst.Host, inst.Port)
 	}
+
+	// Create object storage gateway
+	gateway, err := storage.NewGateway(instances)
+	if err != nil {
+		log.Fatalf("failed to create gateway: %v", err)
+	}
+	defer gateway.Close()
 
 	apiRouter := api.NewRouter()
 	http.ListenAndServe(":8080", apiRouter)

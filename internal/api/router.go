@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/spacelift-io/object-storage-gateway/internal/handlers"
+	"github.com/irensaltali/object-storage-gateway/internal/handlers"
 
 	"github.com/gorilla/mux"
 )
