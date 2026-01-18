@@ -42,6 +42,7 @@ func main() {
 	defer gateway.Close()
 	log.Printf("Gateway is ready to use")
 
+	// Create API router
 	apiRouter := api.NewRouter(gateway)
 	http.ListenAndServe(":3000", apiRouter)
 	log.Printf("API server is running on port 3000")

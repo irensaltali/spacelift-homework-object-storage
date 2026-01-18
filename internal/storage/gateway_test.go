@@ -145,7 +145,7 @@ func TestNewGateway(t *testing.T) {
 func TestGateway_PutObject(t *testing.T) {
 	tests := []struct {
 		name      string
-		objectID  string
+		objectKey string
 		data      io.Reader
 		size      int64
 		setupMock func() *mockMinioClient
@@ -153,26 +153,26 @@ func TestGateway_PutObject(t *testing.T) {
 		errMsg    string
 	}{
 		{
-			name:     "empty object ID",
-			objectID: "",
-			data:     strings.NewReader("test data"),
-			size:     9,
-			wantErr:  true,
-			errMsg:   "object id cannot be empty",
+			name:      "empty object ID",
+			objectKey: "",
+			data:      strings.NewReader("test data"),
+			size:      9,
+			wantErr:   true,
+			errMsg:    "object id cannot be empty",
 		},
 		{
-			name:     "nil data",
-			objectID: "test-object",
-			data:     nil,
-			size:     0,
-			wantErr:  true,
-			errMsg:   "data cannot be nil",
+			name:      "nil data",
+			objectKey: "test-object",
+			data:      nil,
+			size:      0,
+			wantErr:   true,
+			errMsg:    "data cannot be nil",
 		},
 		{
-			name:     "successful put",
-			objectID: "test-object",
-			data:     strings.NewReader("test data"),
-			size:     9,
+			name:      "successful put",
+			objectKey: "test-object",
+			data:      strings.NewReader("test data"),
+			size:      9,
 			setupMock: func() *mockMinioClient {
 				return &mockMinioClient{
 					bucketExistsFunc: func(ctx context.Context, bucketName string) (bool, error) {
@@ -186,10 +186,10 @@ func TestGateway_PutObject(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "bucket does not exist, create it",
-			objectID: "test-object",
-			data:     strings.NewReader("test data"),
-			size:     9,
+			name:      "bucket does not exist, create it",
+			objectKey: "test-object",
+			data:      strings.NewReader("test data"),
+			size:      9,
 			setupMock: func() *mockMinioClient {
 				return &mockMinioClient{
 					bucketExistsFunc: func(ctx context.Context, bucketName string) (bool, error) {
@@ -206,10 +206,10 @@ func TestGateway_PutObject(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "put object error",
-			objectID: "test-object",
-			data:     strings.NewReader("test data"),
-			size:     9,
+			name:      "put object error",
+			objectKey: "test-object",
+			data:      strings.NewReader("test data"),
+			size:      9,
 			setupMock: func() *mockMinioClient {
 				return &mockMinioClient{
 					bucketExistsFunc: func(ctx context.Context, bucketName string) (bool, error) {
@@ -243,7 +243,7 @@ func TestGateway_PutObject(t *testing.T) {
 			_ = tt.setupMock
 
 			ctx := context.Background()
-			err = gateway.PutObject(ctx, tt.objectID, tt.data, tt.size)
+			err = gateway.PutObject(ctx, tt.objectKey, tt.data, tt.size)
 
 			if tt.wantErr {
 				if err == nil {
@@ -265,20 +265,20 @@ func TestGateway_PutObject(t *testing.T) {
 func TestGateway_GetObject(t *testing.T) {
 	tests := []struct {
 		name      string
-		objectID  string
+		objectKey string
 		setupMock func() *mockMinioClient
 		wantErr   bool
 		errMsg    string
 	}{
 		{
-			name:     "empty object ID",
-			objectID: "",
-			wantErr:  true,
-			errMsg:   "object id cannot be empty",
+			name:      "empty object ID",
+			objectKey: "",
+			wantErr:   true,
+			errMsg:    "object id cannot be empty",
 		},
 		{
-			name:     "object not found",
-			objectID: "nonexistent",
+			name:      "object not found",
+			objectKey: "nonexistent",
 			setupMock: func() *mockMinioClient {
 				return &mockMinioClient{
 					statObjectFunc: func(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error) {
@@ -304,7 +304,7 @@ func TestGateway_GetObject(t *testing.T) {
 			defer gateway.Close()
 
 			ctx := context.Background()
-			_, err = gateway.GetObject(ctx, tt.objectID)
+			_, err = gateway.GetObject(ctx, tt.objectKey)
 
 			if tt.wantErr {
 				if err == nil {
@@ -352,13 +352,13 @@ func TestGateway_SelectInstanceConsistency(t *testing.T) {
 	}
 	defer gateway.Close()
 
-	objectID := "test-object-123"
-	instanceID1, err := gateway.hasher.SelectInstance(objectID)
+	objectKey := "test-object-123"
+	instanceID1, err := gateway.hasher.SelectInstance(objectKey)
 	if err != nil {
 		t.Fatalf("SelectInstance() error = %v", err)
 	}
 
-	instanceID2, err := gateway.hasher.SelectInstance(objectID)
+	instanceID2, err := gateway.hasher.SelectInstance(objectKey)
 	if err != nil {
 		t.Fatalf("SelectInstance() error = %v", err)
 	}

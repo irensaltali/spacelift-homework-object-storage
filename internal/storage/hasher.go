@@ -23,8 +23,8 @@ func NewConsistentHasher(instances []string) (*ConsistentHasher, error) {
 
 // SelectInstance returns the instance ID for a given object ID.
 // The same object ID always maps to the same instance.
-func (ch *ConsistentHasher) SelectInstance(objectID string) (string, error) {
-	if objectID == "" {
+func (ch *ConsistentHasher) SelectInstance(objectKey string) (string, error) {
+	if objectKey == "" {
 		return "", fmt.Errorf("object id cannot be empty")
 	}
 
@@ -33,7 +33,7 @@ func (ch *ConsistentHasher) SelectInstance(objectID string) (string, error) {
 	}
 
 	// Use CRC32 for deterministic hashing
-	hash := crc32.ChecksumIEEE([]byte(objectID))
+	hash := crc32.ChecksumIEEE([]byte(objectKey))
 	index := hash % uint32(len(ch.instances))
 
 	return ch.instances[int(index)], nil

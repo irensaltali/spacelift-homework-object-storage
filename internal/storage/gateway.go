@@ -45,8 +45,8 @@ func NewGateway(instances []discovery.MinioInstance) (*Gateway, error) {
 }
 
 // PutObject stores an object in the gateway.
-func (g *Gateway) PutObject(ctx context.Context, objectID string, data io.Reader, size int64) error {
-	if objectID == "" {
+func (g *Gateway) PutObject(ctx context.Context, objectKey string, data io.Reader, size int64) error {
+	if objectKey == "" {
 		return fmt.Errorf("object id cannot be empty")
 	}
 
@@ -55,7 +55,7 @@ func (g *Gateway) PutObject(ctx context.Context, objectID string, data io.Reader
 	}
 
 	// Select instance based on object ID
-	instanceID, err := g.hasher.SelectInstance(objectID)
+	instanceID, err := g.hasher.SelectInstance(objectKey)
 	if err != nil {
 		return fmt.Errorf("failed to select instance: %w", err)
 	}
@@ -80,7 +80,7 @@ func (g *Gateway) PutObject(ctx context.Context, objectID string, data io.Reader
 		}
 	}
 
-	_, err = client.PutObject(ctx, bucketName, objectID, data, size, minio.PutObjectOptions{})
+	_, err = client.PutObject(ctx, bucketName, objectKey, data, size, minio.PutObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to put object in minio: %w", err)
 	}
@@ -89,13 +89,13 @@ func (g *Gateway) PutObject(ctx context.Context, objectID string, data io.Reader
 }
 
 // GetObject retrieves an object from the gateway.
-func (g *Gateway) GetObject(ctx context.Context, objectID string) (io.ReadCloser, error) {
-	if objectID == "" {
+func (g *Gateway) GetObject(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	if objectKey == "" {
 		return nil, fmt.Errorf("object id cannot be empty")
 	}
 
 	// Select instance based on object ID
-	instanceID, err := g.hasher.SelectInstance(objectID)
+	instanceID, err := g.hasher.SelectInstance(objectKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select instance: %w", err)
 	}
@@ -109,18 +109,18 @@ func (g *Gateway) GetObject(ctx context.Context, objectID string) (io.ReadCloser
 	// Retrieve object from Minio
 	bucketName := "objects"
 
-	_, err = client.StatObject(ctx, bucketName, objectID, minio.StatObjectOptions{})
+	_, err = client.StatObject(ctx, bucketName, objectKey, minio.StatObjectOptions{})
 
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse.Code == "NoSuchKey" || errResponse.Code == "NoSuchBucket" || errResponse.Code == "NoSuchObject" {
 			return nil, fmt.Errorf("object not found or error reading: %w", err)
 		}
-		log.Printf("GET /object/%s - error stat object: %v, code: %s", objectID, errResponse, errResponse.Code)
+		log.Printf("GET /object/%s - error stat object: %v, code: %s", objectKey, errResponse, errResponse.Code)
 		return nil, fmt.Errorf("failed to stat object: %w", err)
 	}
 
-	object, err := client.GetObject(ctx, bucketName, objectID, minio.GetObjectOptions{})
+	object, err := client.GetObject(ctx, bucketName, objectKey, minio.GetObjectOptions{})
 	if err != nil {
 		object.Close()
 		return nil, fmt.Errorf("object not found or error reading: %w", err)

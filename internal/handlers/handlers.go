@@ -13,33 +13,33 @@ import (
 
 // PutObject handles the PUT /object/{id} endpoint
 func PutObject(w http.ResponseWriter, r *http.Request, gateway *storage.Gateway) {
-	objectID := mux.Vars(r)["id"]
-	log.Printf("PUT /object/%s - received request, content-length: %d", objectID, r.ContentLength)
+	objectKey := mux.Vars(r)["id"]
+	log.Printf("PUT /object/%s - received request, content-length: %d", objectKey, r.ContentLength)
 
 	// Get content length from request header
 	contentLength := r.ContentLength
 	if contentLength < 0 {
-		log.Printf("PUT /object/%s - error: content-length header is required", objectID)
+		log.Printf("PUT /object/%s - error: content-length header is required", objectKey)
 		http.Error(w, "content-length header is required", http.StatusBadRequest)
 		return
 	}
 
-	// Store object in gateway
-	if err := gateway.PutObject(r.Context(), objectID, r.Body, contentLength); err != nil {
-		log.Printf("PUT /object/%s - error storing object: %v", objectID, err)
+	// Store object by gateway
+	if err := gateway.PutObject(r.Context(), objectKey, r.Body, contentLength); err != nil {
+		log.Printf("PUT /object/%s - error storing object: %v", objectKey, err)
 		statusCode := http.StatusInternalServerError
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
-	log.Printf("PUT /object/%s - object stored successfully", objectID)
+	log.Printf("PUT /object/%s - object stored successfully", objectKey)
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	response := map[string]interface{}{
-		"id":      objectID,
+	response := map[string]any{
+		"id":      objectKey,
 		"status":  "stored",
 		"message": "object stored successfully",
 	}
@@ -49,27 +49,27 @@ func PutObject(w http.ResponseWriter, r *http.Request, gateway *storage.Gateway)
 
 // GetObject handles the GET /object/{id} endpoint
 func GetObject(w http.ResponseWriter, r *http.Request, gateway *storage.Gateway) {
-	objectID := mux.Vars(r)["id"]
-	log.Printf("GET /object/%s - received request", objectID)
+	objectKey := mux.Vars(r)["id"]
+	log.Printf("GET /object/%s - received request", objectKey)
 
 	// Retrieve object from gateway
-	object, err := gateway.GetObject(r.Context(), objectID)
+	object, err := gateway.GetObject(r.Context(), objectKey)
 	if err != nil {
 		// Check if it's a "not found" error by checking the error message
 		errMsg := strings.ToLower(err.Error())
 		if strings.Contains(errMsg, "object not found") {
-			log.Printf("GET /object/%s - object not found", objectID)
+			log.Printf("GET /object/%s - object not found", objectKey)
 			http.Error(w, "object not found", http.StatusNotFound)
 			return
 		}
-		log.Printf("GET /object/%s - error retrieving object: %v", objectID, err)
+		log.Printf("GET /object/%s - error retrieving object: %v", objectKey, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	defer object.Close()
 
-	log.Printf("GET /object/%s - object found, streaming to client", objectID)
+	log.Printf("GET /object/%s - object found, streaming to client", objectKey)
 
 	// Set response headers
 	w.Header().Set("Content-Type", "application/octet-stream")
@@ -77,9 +77,9 @@ func GetObject(w http.ResponseWriter, r *http.Request, gateway *storage.Gateway)
 
 	// Stream object data to response
 	if _, err := io.Copy(w, object); err != nil {
-		log.Printf("GET /object/%s - error streaming object: %v", objectID, err)
+		log.Printf("GET /object/%s - error streaming object: %v", objectKey, err)
 		return
 	}
 
-	log.Printf("GET /object/%s - object streamed successfully", objectID)
+	log.Printf("GET /object/%s - object streamed successfully", objectKey)
 }

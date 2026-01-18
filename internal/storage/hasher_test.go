@@ -13,13 +13,13 @@ func TestConsistentHasher(t *testing.T) {
 	}
 
 	// Test that same ID always maps to same instance
-	objectID := "test-object-123"
-	selectedInstance1, err := hasher.SelectInstance(objectID)
+	objectKey := "test-object-123"
+	selectedInstance1, err := hasher.SelectInstance(objectKey)
 	if err != nil {
 		t.Fatalf("failed to select instance: %v", err)
 	}
 
-	selectedInstance2, err := hasher.SelectInstance(objectID)
+	selectedInstance2, err := hasher.SelectInstance(objectKey)
 	if err != nil {
 		t.Fatalf("failed to select instance: %v", err)
 	}
@@ -29,8 +29,8 @@ func TestConsistentHasher(t *testing.T) {
 	}
 
 	// Test that different IDs can map to different instances
-	objectID2 := "test-object-456"
-	selectedInstance3, err := hasher.SelectInstance(objectID2)
+	objectKey2 := "test-object-456"
+	selectedInstance3, err := hasher.SelectInstance(objectKey2)
 	if err != nil {
 		t.Fatalf("failed to select instance: %v", err)
 	}
@@ -61,8 +61,8 @@ func TestConsistentHasherUpdateInstances(t *testing.T) {
 		t.Fatalf("failed to create hasher: %v", err)
 	}
 
-	objectID := "test-object"
-	selectedInstance1, _ := hasher.SelectInstance(objectID)
+	objectKey := "test-object"
+	selectedInstance1, _ := hasher.SelectInstance(objectKey)
 
 	// Update instances
 	newInstances := []string{"instance-1", "instance-2", "instance-3"}
@@ -71,7 +71,7 @@ func TestConsistentHasherUpdateInstances(t *testing.T) {
 		t.Fatalf("failed to update instances: %v", err)
 	}
 
-	selectedInstance2, _ := hasher.SelectInstance(objectID)
+	selectedInstance2, _ := hasher.SelectInstance(objectKey)
 
 	// Note: Hashing might be different after adding instances
 	// This is expected behavior for consistent hashing

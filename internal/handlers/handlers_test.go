@@ -41,7 +41,7 @@ func TestPutObject_MissingContentLength(t *testing.T) {
 	}
 }
 
-func TestPutObject_EmptyObjectID(t *testing.T) {
+func TestPutObject_EmptyObjectKey(t *testing.T) {
 	instances := []discovery.MinioInstance{
 		{ID: "instance-1", Host: "localhost", Port: "9000", AccessKey: "minioadmin", SecretKey: "minioadmin"},
 	}
@@ -102,7 +102,7 @@ func TestPutObject_SuccessResponseFormat(t *testing.T) {
 	}
 }
 
-func TestGetObject_EmptyObjectID(t *testing.T) {
+func TestGetObject_EmptyObjectKey(t *testing.T) {
 	instances := []discovery.MinioInstance{
 		{ID: "instance-1", Host: "localhost", Port: "9000", AccessKey: "minioadmin", SecretKey: "minioadmin"},
 	}
