@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/irensaltali/object-storage-gateway/internal/discovery"
 	"github.com/minio/minio-go/v7"
@@ -67,6 +68,18 @@ func (g *Gateway) PutObject(ctx context.Context, objectID string, data io.Reader
 
 	bucketName := "objects"
 
+	exists, err := client.BucketExists(ctx, bucketName)
+	if err != nil {
+		log.Fatalln("Failed to check bucket existence:", err)
+	}
+
+	if !exists {
+		err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			log.Fatalln("Failed to create bucket:", err)
+		}
+	}
+
 	_, err = client.PutObject(ctx, bucketName, objectID, data, size, minio.PutObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to put object in minio: %w", err)
@@ -95,6 +108,17 @@ func (g *Gateway) GetObject(ctx context.Context, objectID string) (io.ReadCloser
 
 	// Retrieve object from Minio
 	bucketName := "objects"
+
+	_, err = client.StatObject(ctx, bucketName, objectID, minio.StatObjectOptions{})
+
+	if err != nil {
+		errResponse := minio.ToErrorResponse(err)
+		if errResponse.Code == "NoSuchKey" || errResponse.Code == "NoSuchBucket" || errResponse.Code == "NoSuchObject" {
+			return nil, fmt.Errorf("object not found or error reading: %w", err)
+		}
+		log.Printf("GET /object/%s - error stat object: %v, code: %s", objectID, errResponse, errResponse.Code)
+		return nil, fmt.Errorf("failed to stat object: %w", err)
+	}
 
 	object, err := client.GetObject(ctx, bucketName, objectID, minio.GetObjectOptions{})
 	if err != nil {

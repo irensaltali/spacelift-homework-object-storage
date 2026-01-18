@@ -43,8 +43,8 @@ func main() {
 	log.Printf("Gateway is ready to use")
 
 	apiRouter := api.NewRouter(gateway)
-	http.ListenAndServe(":8080", apiRouter)
-	log.Printf("API server is running on port 8080")
+	http.ListenAndServe(":3000", apiRouter)
+	log.Printf("API server is running on port 3000")
 }
 
 func printCredits() {

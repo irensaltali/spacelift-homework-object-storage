@@ -19,6 +19,10 @@ func NewRouter(gateway *storage.Gateway) *mux.Router {
 	router.HandleFunc("/object/{id}", func(w http.ResponseWriter, r *http.Request) {
 		handlers.GetObject(w, r, gateway)
 	}).Methods("GET")
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}).Methods("GET")
 
 	return router
 }
