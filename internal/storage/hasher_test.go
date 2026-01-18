@@ -2,14 +2,12 @@ package storage
 
 import (
 	"testing"
-
-	"github.com/irensaltali/object-storage-gateway/internal/storage"
 )
 
 func TestConsistentHasher(t *testing.T) {
 	instances := []string{"instance-1", "instance-2", "instance-3"}
 
-	hasher, err := storage.NewConsistentHasher(instances)
+	hasher, err := NewConsistentHasher(instances)
 	if err != nil {
 		t.Fatalf("failed to create hasher: %v", err)
 	}
@@ -49,7 +47,7 @@ func TestConsistentHasher(t *testing.T) {
 	}
 
 	// Test no instances
-	_, err = storage.NewConsistentHasher([]string{})
+	_, err = NewConsistentHasher([]string{})
 	if err == nil {
 		t.Error("expected error for no instances")
 	}
@@ -58,7 +56,7 @@ func TestConsistentHasher(t *testing.T) {
 func TestConsistentHasherUpdateInstances(t *testing.T) {
 	instances := []string{"instance-1", "instance-2"}
 
-	hasher, err := storage.NewConsistentHasher(instances)
+	hasher, err := NewConsistentHasher(instances)
 	if err != nil {
 		t.Fatalf("failed to create hasher: %v", err)
 	}
