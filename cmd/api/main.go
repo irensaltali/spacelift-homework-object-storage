@@ -40,9 +40,11 @@ func main() {
 		log.Fatalf("failed to create gateway: %v", err)
 	}
 	defer gateway.Close()
+	log.Printf("Gateway is ready to use")
 
-	apiRouter := api.NewRouter()
+	apiRouter := api.NewRouter(gateway)
 	http.ListenAndServe(":8080", apiRouter)
+	log.Printf("API server is running on port 8080")
 }
 
 func printCredits() {
