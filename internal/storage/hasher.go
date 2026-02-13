@@ -2,7 +2,8 @@ package storage
 
 import (
 	"fmt"
-	"hash/crc32"
+	"hash/fnv"
+	"sort"
 )
 
 // ConsistentHasher provides deterministic mapping of IDs to instances.
@@ -16,8 +17,11 @@ func NewConsistentHasher(instances []string) (*ConsistentHasher, error) {
 		return nil, fmt.Errorf("at least one instance is required")
 	}
 
+	sortedInstances := append([]string(nil), instances...)
+	sort.Strings(sortedInstances)
+
 	return &ConsistentHasher{
-		instances: instances,
+		instances: sortedInstances,
 	}, nil
 }
 
@@ -32,11 +36,20 @@ func (ch *ConsistentHasher) SelectInstance(objectKey string) (string, error) {
 		return "", fmt.Errorf("no instances available")
 	}
 
-	// Use CRC32 for deterministic hashing
-	hash := crc32.ChecksumIEEE([]byte(objectKey))
-	index := hash % uint32(len(ch.instances))
+	// Rendezvous hashing (highest-random-weight) keeps selection deterministic
+	// while avoiding modulo based bucket assignment.
+	selected := ""
+	var maxScore uint64
 
-	return ch.instances[int(index)], nil
+	for idx, instance := range ch.instances {
+		score := calculateRendezvousScore(objectKey, instance)
+		if idx == 0 || score > maxScore || (score == maxScore && instance < selected) {
+			selected = instance
+			maxScore = score
+		}
+	}
+
+	return selected, nil
 }
 
 // UpdateInstances updates the list of available instances.
@@ -46,6 +59,16 @@ func (ch *ConsistentHasher) UpdateInstances(instances []string) error {
 		return fmt.Errorf("at least one instance is required")
 	}
 
-	ch.instances = instances
+	sortedInstances := append([]string(nil), instances...)
+	sort.Strings(sortedInstances)
+	ch.instances = sortedInstances
 	return nil
+}
+
+func calculateRendezvousScore(objectKey, instance string) uint64 {
+	hasher := fnv.New64a()
+	_, _ = hasher.Write([]byte(objectKey))
+	_, _ = hasher.Write([]byte{':'})
+	_, _ = hasher.Write([]byte(instance))
+	return hasher.Sum64()
 }

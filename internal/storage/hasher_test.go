@@ -93,3 +93,28 @@ func TestConsistentHasherUpdateInstances(t *testing.T) {
 
 	_ = selectedInstance1 // selectedInstance1 is used for comparison logic
 }
+
+func TestConsistentHasher_IsOrderIndependent(t *testing.T) {
+	hasherA, err := NewConsistentHasher([]string{"instance-2", "instance-1", "instance-3"})
+	if err != nil {
+		t.Fatalf("failed to create hasherA: %v", err)
+	}
+	hasherB, err := NewConsistentHasher([]string{"instance-1", "instance-2", "instance-3"})
+	if err != nil {
+		t.Fatalf("failed to create hasherB: %v", err)
+	}
+
+	key := "object123"
+	selectedA, err := hasherA.SelectInstance(key)
+	if err != nil {
+		t.Fatalf("hasherA.SelectInstance() error: %v", err)
+	}
+	selectedB, err := hasherB.SelectInstance(key)
+	if err != nil {
+		t.Fatalf("hasherB.SelectInstance() error: %v", err)
+	}
+
+	if selectedA != selectedB {
+		t.Fatalf("selection differs by instance ordering: %s vs %s", selectedA, selectedB)
+	}
+}

@@ -5,21 +5,50 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/irensaltali/object-storage-gateway/internal/discovery"
 	"github.com/minio/minio-go/v7"
 )
 
+const defaultBucketName = "objects"
+
 // Gateway provides the main object storage gateway functionality.
 type Gateway struct {
-	hasher  *ConsistentHasher
-	clients *MinioClientManager
+	hasher     *ConsistentHasher
+	clients    *MinioClientManager
+	bucketName string
+}
+
+type gatewayConfig struct {
+	bucketName string
+}
+
+// GatewayOption configures gateway construction.
+type GatewayOption func(*gatewayConfig)
+
+// WithBucketName configures the bucket used for object storage.
+func WithBucketName(bucketName string) GatewayOption {
+	return func(cfg *gatewayConfig) {
+		cfg.bucketName = bucketName
+	}
 }
 
 // NewGateway creates a new object storage gateway.
-func NewGateway(instances []discovery.MinioInstance) (*Gateway, error) {
+func NewGateway(instances []discovery.MinioInstance, opts ...GatewayOption) (*Gateway, error) {
 	if len(instances) == 0 {
 		return nil, fmt.Errorf("at least one minio instance is required")
+	}
+
+	cfg := gatewayConfig{
+		bucketName: defaultBucketName,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	if strings.TrimSpace(cfg.bucketName) == "" {
+		return nil, fmt.Errorf("bucket name cannot be empty")
 	}
 
 	// Extract instance IDs for hashing
@@ -39,19 +68,23 @@ func NewGateway(instances []discovery.MinioInstance) (*Gateway, error) {
 	}
 
 	return &Gateway{
-		hasher:  hasher,
-		clients: clients,
+		hasher:     hasher,
+		clients:    clients,
+		bucketName: cfg.bucketName,
 	}, nil
 }
 
 // PutObject stores an object in the gateway.
 func (g *Gateway) PutObject(ctx context.Context, objectKey string, data io.Reader, size int64) error {
-	if objectKey == "" {
-		return fmt.Errorf("object id cannot be empty")
+	if err := ValidateObjectID(objectKey); err != nil {
+		return err
 	}
 
 	if data == nil {
 		return fmt.Errorf("data cannot be nil")
+	}
+	if size < 0 {
+		return fmt.Errorf("size cannot be negative")
 	}
 
 	// Select instance based on object ID
@@ -66,21 +99,22 @@ func (g *Gateway) PutObject(ctx context.Context, objectKey string, data io.Reade
 		return fmt.Errorf("failed to get client: %w", err)
 	}
 
-	bucketName := "objects"
-
-	exists, err := client.BucketExists(ctx, bucketName)
+	exists, err := client.BucketExists(ctx, g.bucketName)
 	if err != nil {
-		log.Fatalln("Failed to check bucket existence:", err)
+		return fmt.Errorf("failed to check bucket %q existence: %w", g.bucketName, err)
 	}
 
 	if !exists {
-		err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		err = client.MakeBucket(ctx, g.bucketName, minio.MakeBucketOptions{})
 		if err != nil {
-			log.Fatalln("Failed to create bucket:", err)
+			errResp := minio.ToErrorResponse(err)
+			if errResp.Code != "BucketAlreadyOwnedByYou" && errResp.Code != "BucketAlreadyExists" {
+				return fmt.Errorf("failed to create bucket %q: %w", g.bucketName, err)
+			}
 		}
 	}
 
-	_, err = client.PutObject(ctx, bucketName, objectKey, data, size, minio.PutObjectOptions{})
+	_, err = client.PutObject(ctx, g.bucketName, objectKey, data, size, minio.PutObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to put object in minio: %w", err)
 	}
@@ -90,8 +124,8 @@ func (g *Gateway) PutObject(ctx context.Context, objectKey string, data io.Reade
 
 // GetObject retrieves an object from the gateway.
 func (g *Gateway) GetObject(ctx context.Context, objectKey string) (io.ReadCloser, error) {
-	if objectKey == "" {
-		return nil, fmt.Errorf("object id cannot be empty")
+	if err := ValidateObjectID(objectKey); err != nil {
+		return nil, err
 	}
 
 	// Select instance based on object ID
@@ -107,23 +141,20 @@ func (g *Gateway) GetObject(ctx context.Context, objectKey string) (io.ReadClose
 	}
 
 	// Retrieve object from Minio
-	bucketName := "objects"
-
-	_, err = client.StatObject(ctx, bucketName, objectKey, minio.StatObjectOptions{})
+	_, err = client.StatObject(ctx, g.bucketName, objectKey, minio.StatObjectOptions{})
 
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse.Code == "NoSuchKey" || errResponse.Code == "NoSuchBucket" || errResponse.Code == "NoSuchObject" {
-			return nil, fmt.Errorf("object not found or error reading: %w", err)
+			return nil, fmt.Errorf("%w: %s", ErrObjectNotFound, objectKey)
 		}
 		log.Printf("GET /object/%s - error stat object: %v, code: %s", objectKey, errResponse, errResponse.Code)
 		return nil, fmt.Errorf("failed to stat object: %w", err)
 	}
 
-	object, err := client.GetObject(ctx, bucketName, objectKey, minio.GetObjectOptions{})
+	object, err := client.GetObject(ctx, g.bucketName, objectKey, minio.GetObjectOptions{})
 	if err != nil {
-		object.Close()
-		return nil, fmt.Errorf("object not found or error reading: %w", err)
+		return nil, fmt.Errorf("failed to get object: %w", err)
 	}
 
 	return object, nil

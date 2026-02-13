@@ -21,8 +21,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gateway ./cmd/api
 # Runtime stage
 FROM alpine:3.18
 
-# Install ca-certificates for HTTPS, Docker CLI for service discovery, and wget for healthcheck
-RUN apk add --no-cache ca-certificates docker-cli wget
+# Install runtime dependencies.
+RUN apk add --no-cache ca-certificates wget
 
 WORKDIR /app
 
